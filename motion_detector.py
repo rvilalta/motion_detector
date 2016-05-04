@@ -33,7 +33,8 @@ def deinit_video_recorder(writer):
 
 def transfer_file(filename):
     #request to connect to storage server
-    
+    print "transfer file " + filename
+
 if __name__ == "__main__": 
     # construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
