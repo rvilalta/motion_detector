@@ -21,7 +21,7 @@ def init_video_recorder(h,w,fps):
     fourcc = cv2.cv.FOURCC(*'DIVX')
     zeros = None
     print "Starting video recording: " + video_name(video_counter)
-    writer = cv2.VideoWriter(video_name, fourcc, fps, (w, h), True)
+    writer = cv2.VideoWriter(video_name(video_counter), fourcc, fps, (w, h), True)
     zeros = np.zeros((h, w), dtype="uint8")
     return writer
 
