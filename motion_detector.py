@@ -3,6 +3,7 @@
 # Adapted from http://www.pyimagesearch.com/2015/05/25/basic-motion-detection-and-tracking-with-python-and-opencv/
 # includes http://www.pyimagesearch.com/2016/02/22/writing-to-video-with-opencv/
 # import the necessary packages
+# needs to have ffmpeg installed - http://www.faqforge.com/linux/how-to-install-ffmpeg-on-ubuntu-14-04/
 import argparse
 import datetime
 import imutils
@@ -12,13 +13,14 @@ import numpy as np
 
 video_counter=1
 is_video_init=False
+writer=None
 
 def video_name(video_counter):
     video_name='test'+str(video_counter)+'.avi'
     return video_name
 
 def init_video_recorder(h,w,fps):
-    fourcc = cv2.cv.FOURCC(*'DIVX')
+    fourcc = cv2.cv.FOURCC(*'XVID')
     zeros = None
     print "Starting video recording: " + video_name(video_counter)
     writer = cv2.VideoWriter(video_name(video_counter), fourcc, fps, (w, h), True)
@@ -40,13 +42,15 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video", help="path to the video file")
     ap.add_argument("-a", "--min-area", type=int, default=500, help="minimum area size")
+    ap.add_argument("-r", "--record", type=bool, default=False, help="record when occupied")
+    ap.add_argument("-d", "--daemon", type=bool, default=False, help="run as background")
     args = vars(ap.parse_args())
     writer = None
      
     # if the video argument is None, then we are reading from webcam
     if args.get("video", None) is None:
         camera = cv2.VideoCapture(0)
-        time.sleep(0.25)
+        time.sleep(1)
      
     # otherwise, we are reading from a video file
     else:
@@ -102,38 +106,44 @@ if __name__ == "__main__":
             (x, y, w, h) = cv2.boundingRect(c)
             cv2.rectangle(frame_resized, (x, y), (x + w, y + h), (0, 255, 0), 2)
             text = "Occupied"
-        
-        #Intrusion detected!    
-        if text=="Occupied" and is_video_init==False:
-            (h, w) = frame.shape[:2]
-            writer=init_video_recorder(h,w,fps)
-            is_video_init=True
-        #During intrusion we record
-        if text=="Occupied":
-            writer.write(frame)
-        #No longer intrusion - We store and transfer
-        if text=="Unoccupied" and is_video_init==True:
-            deinit_video_recorder(writer)
-            transfer_file(video_name(video_counter))
-            is_video_init=False
-            video_counter+=1
-            
-        # draw the text and timestamp on the frame
-        cv2.putText(frame_resized, "Room Status: {}".format(text), (10, 20),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        cv2.putText(frame_resized, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
-            (10, frame_resized.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+        if args["record"]:
+            #Intrusion detected!    
+            if text=="Occupied" and is_video_init==False:
+                (h, w) = frame.shape[:2]
+                writer=init_video_recorder(h,w,fps)
+                is_video_init=True
+            #During intrusion we record
+            if text=="Occupied":
+                writer.write(frame)
+            #No longer intrusion - We store and transfer
+            if text=="Unoccupied" and is_video_init==True:
+                deinit_video_recorder(writer)
+                transfer_file(video_name(video_counter))
+                is_video_init=False
+                video_counter+=1
+        #Show images if not daemon
+        if args["daemon"]==False:
+            # draw the text and timestamp on the frame
+            cv2.putText(frame_resized, "Room Status: {}".format(text), (10, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.putText(frame_resized, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
+                (10, frame_resized.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+	        # show the frame and record if the user presses a key
+            cv2.imshow("Security Feed", frame_resized)
+            cv2.imshow("Thresh", thresh)
+            cv2.imshow("Frame Delta", frameDelta)
 
-	    # show the frame and record if the user presses a key
-        cv2.imshow("Security Feed", frame_resized)
-        cv2.imshow("Thresh", thresh)
-        cv2.imshow("Frame Delta", frameDelta)
-        key = cv2.waitKey(1) & 0xFF
+        #update first frame
+        del(firstFrame)
+        firstFrame = gray
+        del (frame)
 
         # if the `q` key is pressed, break from the lop
+        key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
      
     # cleanup the camera and close any open windows
     camera.release()
-    cv2.destroyAllWindows()
+    if args["daemon"]==False:
+        cv2.destroyAllWindows()
