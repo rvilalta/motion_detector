@@ -134,8 +134,8 @@ if __name__ == "__main__":
             cv2.imshow("Frame Delta", frameDelta)
 
         #update first frame
-        del(firstFrame)
         if args.get("video", None) is None:
+		    del(firstFrame)
 		    firstFrame = gray
         del (frame)
 
