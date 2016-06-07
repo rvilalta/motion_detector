@@ -135,7 +135,8 @@ if __name__ == "__main__":
 
         #update first frame
         del(firstFrame)
-        firstFrame = gray
+        if args.get("video", None) is None:
+		    firstFrame = gray
         del (frame)
 
         # if the `q` key is pressed, break from the lop
